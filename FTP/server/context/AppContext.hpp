@@ -1,3 +1,4 @@
+#pragma once
 #include "User.hpp"
 #include "Path.hpp"
 #include "../Configuration.hpp"
@@ -11,4 +12,5 @@ public:
     int commandFd;
     int dataFd;
     AppContext(Configuration configuration, int commandFd_, int dataFd_);
+    void config_user(User * _user);
 };

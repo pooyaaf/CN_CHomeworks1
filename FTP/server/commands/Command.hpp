@@ -1,4 +1,6 @@
+#pragma once
 #include "../context/AppContext.hpp"
+#include "../Messages.h"
 
 #include <iostream>
 #include <fstream>
