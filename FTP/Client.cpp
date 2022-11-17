@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -47,13 +48,14 @@ bool check_command(string in)
 
     if (res[0] == "help" || res[0] == "quit")
     {
+        cout << "one: " << in << endl;
         return res.size() == 1;
     }
     if (res[0] == "user" || res[0] == "pass" || res[0] == "retr")
     {
         return res.size() == 2;
     }
-   
+ 
     return false;
 }
 
@@ -67,7 +69,7 @@ bool is_data_command(string in)
 
 int main(int argc, char const *argv[])
 {
-    if (argv[1] > 0 && argv[2] > 0)
+    if (argc > 2)
     {
         cmd_fd = connectTo(atoi(argv[1]));
         cout << "200: Cmd port connected: " << argv[1] << " fd : " << cmd_fd << endl
@@ -148,8 +150,18 @@ int main(int argc, char const *argv[])
             string convert;
             convert.assign(rcvBytes.begin(), rcvBytes.end());
 
-            if (get_cmd(buff) == "retr") // LS
+            if (get_cmd(buff) == "ls") // LS
             {
+                cout << receivedString << endl
+                     << convert << endl
+                     << flush;
+            }
+            else // retr
+            {
+                // commad port gets Client message and name file like : <name> - 226: Successful Download
+                // split string with - then create a file with <name>
+                // then << convert and close file
+                // then cout second half of message
                 cout << "DONE" << endl
                      << flush;
             }

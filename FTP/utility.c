@@ -19,8 +19,7 @@ void readLine(char *dst, int socket_fd)
     }
 }
 
-void die(char *scope)
-{
+void die(const char* scope){
     perror(scope);
     exit(0);
 }
