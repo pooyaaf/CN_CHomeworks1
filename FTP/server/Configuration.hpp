@@ -13,5 +13,5 @@ struct Configuration
 {
     string baseDirectory = "none";
     vector<struct Auth> auth{
-        {"Perriex", "moxeed"}};
+        {"root", "toor"}};
 };
