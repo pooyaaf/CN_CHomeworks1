@@ -1,14 +1,8 @@
 214
 user [name] : Its argument is used to specify the user`s string. It is used for user authentication.
 
-214
 pass [password] : Its argument is used to check user`s identity is correct. It is used for user authentication.
 
-214 
 retr [name] : Its argument is specify a file name. It is used for downloading an existing file from server.
 
-214
-Upload [name] : Its argument is specify a file name. It is used for uploading a file into the server.
-
-214
 quit : It is used for logging out of a system.

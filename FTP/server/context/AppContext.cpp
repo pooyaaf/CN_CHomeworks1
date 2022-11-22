@@ -5,6 +5,7 @@ AppContext::AppContext(Configuration configuration, int commandFd_, int dataFd_)
 {
     commandFd = commandFd_;
     dataFd = dataFd_;
+    files = configuration.admin_files;
 }
 
 void AppContext::config_user(User *_user)

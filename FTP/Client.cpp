@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,27 +9,21 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <iostream>
+#include <vector>
 
-#include "Messages.h"
+#include "server/Messages.h"
 #include "utility.hpp"
-#include "Extra.h"
-
-#define COMMAND_PORT 5000
-#define DATA_PORT 6000
 
 using namespace std;
 
 // global variables
 int data_fd, cmd_fd;
 
-// move to extra
 string get_cmd(string in)
 {
     return in.substr(0, in.find(" "));
 }
 
-// replace with defines after mk
-// move to extra
 bool check_command(string in)
 {
     size_t pos_start = 0, pos_end, delim_len = 1;
@@ -46,34 +39,32 @@ bool check_command(string in)
 
     res.push_back(in.substr(pos_start));
 
-    if (res[0] == "help" || res[0] == "quit")
+    if (res[0] == HELP || res[0] == QUIT)
     {
         return res.size() == 1;
     }
-    if (res[0] == "user" || res[0] == "pass" || res[0] == "retr")
+    if (res[0] == USER || res[0] == PASS || res[0] == RETR)
     {
         return res.size() == 2;
     }
-   
+  
     return false;
 }
 
-// move to exta
-// use defines in Message.h
 bool is_data_command(string in)
 {
     string cmd = get_cmd(in);
-    return cmd == "retr";
+    return cmd == RETR ;
 }
 
 int main(int argc, char const *argv[])
 {
     if (argc > 2)
     {
-        cmd_fd = connectTo(atoi(argv[1]));
+        cmd_fd = connect_to(atoi(argv[1]));
         cout << "200: Cmd port connected: " << argv[1] << " fd : " << cmd_fd << endl
              << flush;
-        data_fd = connectTo(atoi(argv[2]));
+        data_fd = connect_to(atoi(argv[2]));
         cout << "200: Data port connected: " << argv[2] << " fd : " << data_fd << endl
              << flush;
     }
@@ -103,54 +94,53 @@ int main(int argc, char const *argv[])
         getline(cin, buff);
         if (check_command(buff) == false)
         {
-            cout << "Error" << endl
-                 << flush; // SYNTAX_ERROR
+            cout << SYNTAX_ERROR << endl
+                 << flush;
             buff.clear();
             continue;
         }
 
-        // send size of buff
         size_t buffLength = buff.size();
         send(cmd_fd, &buffLength, sizeof(size_t), MSG_CONFIRM);
 
-        // send command
         send(cmd_fd, buff.c_str(), buff.size(), MSG_CONFIRM);
 
-        // ? Waits ...
-
-        // recive size of data
         string receivedString;
         read_string(&receivedString, cmd_fd);
 
         size_t dataLength;
-        // if needs connect to data port
-        if (is_data_command(buff) == true)
+        if (is_data_command(buff) == true && receivedString.substr(0, 3) == "226")
         {
-            // recive size of input
-            size_t bytesLength;
-            recv(data_fd, &bytesLength, sizeof(size_t), 0);
-            bytesLength = ntohl(bytesLength);
+        
+            if(get_cmd(buff) == RETR)
+            {
+                off_t bytesLength;
+                string filename;
 
-            // recive message
-            vector<uint8_t> rcvBytes;
-            rcvBytes.resize(bytesLength, 0x00);
+                read_string(&filename, data_fd);
+                filename = "user/" + filename;
+                read(data_fd, &bytesLength, sizeof(off_t));
 
-            recv(data_fd, &(rcvBytes[0]), dataLength, 0);
+                char buf[BUF_SIZE];
+                int file = open(filename.c_str(), O_WRONLY | O_CREAT, 0777);
+                int readsize = 0;
+                while (bytesLength > 0)
+                {
+                    readsize = read(data_fd, buf, sizeof buf);
+                    write(file, buf, readsize);
+                    bytesLength -= BUF_SIZE;
+                }
+                close(file);
 
-            string convert;
-            convert.assign(rcvBytes.begin(), rcvBytes.end());
-
-           //retr
-                cout << "DONE" << endl
-                     << flush;
-            
+                cout << receivedString << endl;
+            }
         }
         else
         {
             cout << receivedString << endl;
         }
 
-        if (receivedString == "221: Successful Quit.") // QUIT_SUCCESS
+        if (receivedString == QUIT_SUCCESS)
         {
             close(cmd_fd);
             close(data_fd);

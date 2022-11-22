@@ -4,7 +4,6 @@
 
 bool IsPathExist(const std::string &s)
 {
-    return true;
     struct stat buffer;
     return (stat (s.c_str(), &buffer) == 0);
 }
@@ -18,8 +17,18 @@ string Path::GetAbsolutePath(){
     return base + "/" + current;
 }
 
+string Path::GetAbsolutePath(string path){
+    string middle = current == "" ? "" : current + "/";
+    return base + "/" + middle + path;
+}
+
 string Path::GetVirtualPath(){
     return "/" + current;
+}
+
+string Path::GetVirtualPath(string path){
+    string middle = current == "" ? "" : current + "/";
+    return middle + path;
 }
 
 void Path::Change(string relativepath){
@@ -42,10 +51,10 @@ void Path::Change(string relativepath){
     {
         current = "";
     }
-    if(segment == ".." && current != "")
+    if(segment == "..")
     {
         int index = current.find_last_of("/");
-        if(index < current.size()) {
+        if(index < current.size() && current != "") {
             current = current.substr(0, index);
         }
         else {

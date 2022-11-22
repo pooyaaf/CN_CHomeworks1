@@ -31,7 +31,7 @@ int start_socket(int port)
     }
 
     listen(fd, 100);
-    
+
     return fd;
 }
 
@@ -40,8 +40,8 @@ int main(int argc, char const *argv[])
     int server_command_fd, server_data_fd, client_command_fd, client_data_fd;
     Application application;
 
-    server_command_fd = start_socket(atoi(argv[1]));
-    server_data_fd = start_socket(atoi(argv[2]));
+    server_command_fd = start_socket(application.configuration.command_channel_port);
+    server_data_fd = start_socket(application.configuration.data_channel_port);
 
     for (;;)
     {
@@ -63,9 +63,12 @@ int main(int argc, char const *argv[])
             printf("socket opened\n");
         }
 
-        //application.Serve(client_command_fd, client_data_fd);
-        thread thread([&]{application.Serve(client_command_fd, client_data_fd);});
+        // application.Serve(client_command_fd, client_data_fd);
+        thread thread([&]
+                      { application.Serve(client_command_fd, client_data_fd); });
         thread.detach();
     }
+    close(server_command_fd);
+    close(server_data_fd);
     return 0;
 }

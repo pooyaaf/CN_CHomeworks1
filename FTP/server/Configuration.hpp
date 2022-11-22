@@ -7,11 +7,15 @@ struct Auth
 {
     string name;
     string pass;
+    bool admin;
+    long size;
 };
 
 struct Configuration
 {
-    string baseDirectory = "none";
-    vector<struct Auth> auth{
-        {"root", "toor"}};
+    string baseDirectory = "root";
+    int command_channel_port;
+    int data_channel_port;
+    vector<struct Auth> auth;
+    vector<string> admin_files;
 };

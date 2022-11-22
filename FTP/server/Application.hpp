@@ -2,8 +2,8 @@
 
 class Application
 {
-private:
-    Configuration configuration;
 public:
+    Configuration configuration;
+    Application();
     void Serve(int commandSocket, int dataSocket);
 };

@@ -1,0 +1,7 @@
+client registered. Time : Tue Nov 22 12:27:16 2022
+Unkown User:  with argument "". status: succeed with response : 214. Time : Tue Nov 22 12:27:19 2022
+Unkown User:  with argument "Ali". status: succeed with response : 331: User name okay, need password.. Time : Tue Nov 22 12:27:34 2022
+User "Ali":  with argument "1234". status: succeed with response : 230: User logged in, proceed. Logged out if appropriate.. Time : Tue Nov 22 12:27:36 2022
+User "Ali":  with argument "a.txt". status: succeed with response : 226: Successful Download.. Time : Tue Nov 22 12:27:43 2022
+User "Ali":  with argument "b.txt". status: faild with response : 500: Error. Time : Tue Nov 22 12:27:47 2022
+User "Ali":  with argument "". status: succeed with response : 221: Successful Quit.. Time : Tue Nov 22 12:27:49 2022

@@ -10,6 +10,8 @@ private:
 public:
     Path(string base_);
     string GetAbsolutePath();
+    string GetAbsolutePath(string path);
     string GetVirtualPath();
+    string GetVirtualPath(string path);
     void Change(string relativepath);
 };
