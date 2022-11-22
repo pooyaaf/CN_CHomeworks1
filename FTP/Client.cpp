@@ -11,8 +11,8 @@
 #include <signal.h>
 #include <iostream>
 
-#include "server/Messages.h"
-#include "utility.h"
+#include "Messages.h"
+#include "utility.hpp"
 #include "Extra.h"
 
 #define COMMAND_PORT 5000
@@ -48,14 +48,13 @@ bool check_command(string in)
 
     if (res[0] == "help" || res[0] == "quit")
     {
-        cout << "one: " << in << endl;
         return res.size() == 1;
     }
     if (res[0] == "user" || res[0] == "pass" || res[0] == "retr")
     {
         return res.size() == 2;
     }
- 
+   
     return false;
 }
 
@@ -111,8 +110,8 @@ int main(int argc, char const *argv[])
         }
 
         // send size of buff
-        uint32_t buffLength = htonl(buff.size());
-        send(cmd_fd, &buffLength, sizeof(uint32_t), MSG_CONFIRM);
+        size_t buffLength = buff.size();
+        send(cmd_fd, &buffLength, sizeof(size_t), MSG_CONFIRM);
 
         // send command
         send(cmd_fd, buff.c_str(), buff.size(), MSG_CONFIRM);
@@ -120,25 +119,16 @@ int main(int argc, char const *argv[])
         // ? Waits ...
 
         // recive size of data
-        uint32_t dataLength;
-        recv(cmd_fd, &dataLength, sizeof(uint32_t), 0);
-        dataLength = ntohl(dataLength);
-
-        // recive message
-        vector<uint8_t> rcvData;
-        rcvData.resize(dataLength, 0x00);
-
-        recv(cmd_fd, &(rcvData[0]), dataLength, 0);
-
         string receivedString;
-        receivedString.assign(rcvData.begin(), rcvData.end());
+        read_string(&receivedString, cmd_fd);
 
+        size_t dataLength;
         // if needs connect to data port
         if (is_data_command(buff) == true)
         {
             // recive size of input
-            uint32_t bytesLength;
-            recv(data_fd, &bytesLength, sizeof(uint32_t), 0);
+            size_t bytesLength;
+            recv(data_fd, &bytesLength, sizeof(size_t), 0);
             bytesLength = ntohl(bytesLength);
 
             // recive message
@@ -150,21 +140,10 @@ int main(int argc, char const *argv[])
             string convert;
             convert.assign(rcvBytes.begin(), rcvBytes.end());
 
-            if (get_cmd(buff) == "ls") // LS
-            {
-                cout << receivedString << endl
-                     << convert << endl
-                     << flush;
-            }
-            else // retr
-            {
-                // commad port gets Client message and name file like : <name> - 226: Successful Download
-                // split string with - then create a file with <name>
-                // then << convert and close file
-                // then cout second half of message
+           //retr
                 cout << "DONE" << endl
                      << flush;
-            }
+            
         }
         else
         {

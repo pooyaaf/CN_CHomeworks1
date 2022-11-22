@@ -1,24 +1,27 @@
+// Login commands
+#define USER "user"
+#define PASS "pass"
 
 // Download a file
 #define RETR "retr"
-// Upload a file
-#define UPLOAD "Uploadgit "
+
 // Help
 #define HELP "help"
 
 // Quit
 #define QUIT "quit"
 
-// Commands - sample
+
+// Commands
+// just a sample
 
 #define USER_COMMAND 0
 #define PASS_COMMAND 1
 #define RETR_COMMAND 2
-#define UPLOAD_COMMAND 3
-#define HELP_COMMAND 4
-#define QUIT_COMMAND 5
-// test
-#define COMMAND(NAME)  { #NAME,  ## _command }
+#define HELP_COMMAND 3
+#define QUIT_COMMAND 4
+
+#define COMMAND(NAME)  { #NAME, NAME ## _command }
 
 struct command
 {
@@ -30,15 +33,13 @@ struct command commands[] =
 {
   COMMAND (user),     // 0
   COMMAND (pass),     // 1
-  COMMAND (retr),     // 3
-  COMMAND (upload),   // 4
-  COMMAND (help),     // 5
-  COMMAND (quit),     // 5
+  COMMAND (retr),     // 2
+  COMMAND (help),     // 3
+  COMMAND (quit),     // 4
 };
 
 void user_command();
 void pass_command();
 void retr_command();
-void upload_command();
 void help_command();
 void quit_command();

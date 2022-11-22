@@ -1,8 +1,11 @@
-#include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
-#include "../utility.h"
+#include <iostream>
+#include <thread>
+
+#include "../utility.hpp"
 
 #include "context/Path.hpp"
 #include "Application.hpp"
@@ -60,7 +63,9 @@ int main(int argc, char const *argv[])
             printf("socket opened\n");
         }
 
-        application.Serve(client_command_fd, client_data_fd);
+        //application.Serve(client_command_fd, client_data_fd);
+        thread thread([&]{application.Serve(client_command_fd, client_data_fd);});
+        thread.detach();
     }
     return 0;
 }

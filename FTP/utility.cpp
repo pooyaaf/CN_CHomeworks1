@@ -1,13 +1,14 @@
-#ifndef UTILITY
-#define UTILITY
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <unistd.h>
+#include <iostream>
 
-#include "utility.h"
+#include "utility.hpp"
+
+#define BUF_SIZE 50
 
 void readLine(char *dst, int socket_fd)
 {
@@ -19,7 +20,8 @@ void readLine(char *dst, int socket_fd)
     }
 }
 
-void die(const char* scope){
+void die(const char* scope)
+{
     perror(scope);
     exit(0);
 }
@@ -70,4 +72,29 @@ int createBroadcastHub(int port, struct sockaddr_in *address, socklen_t size)
     return socket_fd;
 }
 
-#endif
+void read_string(string* buffer, int fd){
+    size_t datalen;
+    char buf[BUF_SIZE] = {0};
+
+    read(fd, &datalen, sizeof(size_t));
+
+    while (datalen > 0)
+    {
+        if(datalen < BUF_SIZE)
+        {
+            read(fd, buf, datalen);
+            buf[datalen] = '\0';
+            datalen = 0;
+        } else {
+            read(fd, buf, (sizeof buf) - 1);
+            datalen -= BUF_SIZE - 1;
+        }
+        buffer->append(buf);
+    }
+}
+
+void write_string(string& buffer, int fd){
+    size_t len = buffer.size();
+    write(fd, &len, sizeof(size_t));
+    write(fd, buffer.c_str(), buffer.size());
+}
