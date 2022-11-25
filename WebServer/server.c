@@ -4,9 +4,22 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <sys/stat.h>       
+#include <sys/stat.h>
+#include <signal.h> // signal handling
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <fcntl.h> // for O_* constants
+#include <pthread.h>
 
 #define PORT 18000
+int server_fd; // listening
+// Structure to hold variables that will be placed in shared memory
+typedef struct
+{
+    pthread_mutex_t mutexlock;
+    int totalbytes;
+} sharedVariables;
 
 // structure to hold the return code and the filepath to serve to client.
 typedef struct
@@ -18,45 +31,46 @@ typedef struct
 char *header200 = "HTTP/1.0 200 OK\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
 char *header400 = "HTTP/1.0 400 Bad Request\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
 char *header404 = "HTTP/1.0 404 Not Found\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
-// ---- //
+// -- Requests -- //
 // send a message to a socket file descripter
-int sendMessage(int fd, char *msg) {
+int sendMessage(int fd, char *msg)
+{
     return write(fd, msg, strlen(msg));
 }
 // Extracts the filename needed from a GET request and adds public_html to the front of it
-char * getFileName(char* msg)
+char *getFileName(char *msg)
 {
     // Variable to store the filename in
-    char * file;
+    char *file;
     // Allocate some memory for the filename and check it went OK
-    if( (file = malloc(sizeof(char) * strlen(msg))) == NULL)
+    if ((file = malloc(sizeof(char) * strlen(msg))) == NULL)
     {
         fprintf(stderr, "Error allocating memory to file in getFileName()\n");
         exit(EXIT_FAILURE);
     }
-    
+
     // Get the filename from the header
     sscanf(msg, "GET %s HTTP/1.1", file);
-    
+
     // Allocate some memory not in read only space to store "public_html"
     char *base;
-    if( (base = malloc(sizeof(char) * (strlen(file) + 18))) == NULL)
+    if ((base = malloc(sizeof(char) * (strlen(file) + 18))) == NULL)
     {
         fprintf(stderr, "Error allocating memory to base in getFileName()\n");
         exit(EXIT_FAILURE);
     }
-    
-    char* ph = "public_html";
-    
+
+    char *ph = "public_html";
+
     // Copy public_html to the non read only memory
     strcpy(base, ph);
-    
+
     // Append the filename after public_html
     strcat(base, file);
-    
+
     // Free file as we now have the file name in base
     free(file);
-    
+
     // Return public_html/filetheywant.html
     return base;
 }
@@ -261,13 +275,35 @@ int printFile(int fd, char *filename)
     // Return how big the file we sent out was
     return totalsize;
 }
+// -- connections -- ///
+// clean up listening socket on ctrl-c
+void cleanup(int sig)
+{
 
+    printf("Cleaning up connections and exiting.\n");
+
+    // try to close the listening socket
+    if (close(server_fd) < 0)
+    {
+        fprintf(stderr, "Error calling close()\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Close the shared memory we used
+    shm_unlink("/sharedmem");
+
+    // exit with success
+    exit(EXIT_SUCCESS);
+}
+// -- Main -- //
 int main(int argc, char const *argv[])
 {
-    int server_fd, new_socket;
+    int new_socket;
     long valread;
-    struct sockaddr_in address;
+    struct sockaddr_in address; // socket address structure
     int addrlen = sizeof(address);
+    // set up signal handler for ctrl-c
+    (void)signal(SIGINT, cleanup);
 
     // Only this line has been changed. Everything is same.
     char *hello = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello world!";
@@ -295,33 +331,86 @@ int main(int argc, char const *argv[])
         perror("In listen");
         exit(EXIT_FAILURE);
     }
+    // Close the shared memory we use just to be safe
+    shm_unlink("/sharedmem");
+    //----//
+    int sharedmem;
+
+    // Open the memory
+    if ((sharedmem = shm_open("/sharedmem", O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) == -1)
+    {
+        fprintf(stderr, "Error opening sharedmem in main() errno is: %s ", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    // Set the size of the shared memory to the size of my structure
+    ftruncate(sharedmem, sizeof(sharedVariables));
+
+    // Map the shared memory into our address space
+    sharedVariables *mempointer;
+
+    // Set mempointer to point at the shared memory
+    mempointer = mmap(NULL, sizeof(sharedVariables), PROT_READ | PROT_WRITE, MAP_SHARED, sharedmem, 0);
+
+    // Check the memory allocation went OK
+    if (mempointer == MAP_FAILED)
+    {
+        fprintf(stderr, "Error setting shared memory for sharedVariables in recordTotalBytes() error is %d \n ", errno);
+        exit(EXIT_FAILURE);
+    }
+    // Initalise the mutex
+    pthread_mutex_init(&(*mempointer).mutexlock, NULL);
+    // Set total bytes sent to 0
+    (*mempointer).totalbytes = 0;
+    // Number of child processes we have spawned
+    int children = 0;
+    // Variable to store the ID of the process we get when we spawn
+    pid_t pid;
+
+    //----//
     while (1)
     {
-        printf("\n+++++++ Waiting for new connection ++++++++\n\n");
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
+        // If we haven't already spawned 10 children fork
+        if (children <= 10)
         {
-            perror("In accept");
-            exit(EXIT_FAILURE);
+            pid = fork();
+            children++;
         }
-        // Get the message from the file descriptor
-        char *header = getMessage(new_socket);
-        // Parse the request
-        httpRequest details = parseRequest(header);
-        // We done with header so we can free it!
-        free(header);
-        // Get header size
-        int headersize;
-        headersize = getHeaderSize(new_socket, details.returncode);
-        // Print out the matched file
-        int pagesize;
-        pagesize = printFile(new_socket, details.filename);
+        // If the pid is -1 the fork failed so handle that
+        if (pid == -1)
+        {
+            fprintf(stderr, "can't fork, error %d\n", errno);
+            exit(1);
+        }
+        // Have the child process deal with the connection
+        if (pid == 0)
+        {
+            printf("\n+++++++ Waiting for new connection ++++++++\n\n");
+            if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
+            {
+                perror("In accept");
+                exit(EXIT_FAILURE);
+            }
+            // Get the message from the file descriptor
+            char *header = getMessage(new_socket);
+            // Parse the request
+            httpRequest details = parseRequest(header);
+            // We done with header so we can free it!
+            free(header);
+            // Get header size
+            int headersize;
+            headersize = getHeaderSize(new_socket, details.returncode);
+            // Print out the matched file
+            int pagesize;
+            pagesize = printFile(new_socket, details.filename);
 
-        char buffer[30000] = {0};
-        valread = read(new_socket, buffer, 30000);
-        printf("%s\n", buffer);
-        write(new_socket, hello, strlen(hello));
-        printf("------------------Hello message sent-------------------");
-        close(new_socket);
+            char buffer[30000] = {0};
+            valread = read(new_socket, buffer, 30000);
+            printf("%s\n", buffer);
+            write(new_socket, hello, strlen(hello));
+            printf("------------------Hello message sent-------------------");
+            close(new_socket);
+        }
     }
     return 0;
 }
