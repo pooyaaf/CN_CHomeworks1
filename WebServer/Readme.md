@@ -10,10 +10,48 @@ Any bad sequence would respond 404.html
 
 Normal requests would be redirected to  ```index.html```  
 > http://localhost:18000/index.html
-### Content-types
+
+---
+A good reading resource for Implementing a simple web-server would be:  <a href="https://medium.com/from-the-scratch/http-server-what-do-you-need-to-know-to-build-a-simple-http-server-from-scratch-d1ef8945e4fa"> Medium-HTTP Server from scratch</a>
+
+## 1.Basic Knowledge
+Internet is based on server-client architecture. Server who can serve multiple clients and clients using web browsers can communicate with servers.
+
+<img src="./img/server-client-role.jpeg" >
+
+The following image shows basically how a web server using socket will work.
+
+
+<img src="./img/elements.jpg "  width="500em"/>
+
+##  2.Parse the Request from the Client
+
+If we look at a simple Get request from client, we will face something like this:
+
+<img src="./img/http_request_0.jpeg" />
+
+The structure is the same for JS, PDF, JPEG, and etc.
+
+<img src="./img/http_request_img.jpeg" />
+<img src="./img/http_request_js.jpeg" />
+
+Also HTTPS use same patterns plus encryption. 
+The root of this structure is:   
+
+
+`HTTP Version + Return-code + \n(Linux) OR \r\n(Windows) + Content-type (LIKE:"text/html) + \n(Linux) OR \r\n(Windows) + \n(Linux) OR \r\n(Windows)`
+
+
+Something like below:
+
+
+```
+HTTP/1.1 200 Ok\r\n
+Content-Type: text/html\r\n\r\n
+```
+## Content-types
 
 Here we list out some common file extension and their Content Type.
-
 <p align="center">
 <table>
     <thead>
@@ -93,4 +131,4 @@ Here we list out some common file extension and their Content Type.
 
 <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types">More Content Types Here</a>
 
-### Explain files
+## Explain files
