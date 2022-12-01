@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <sys/stat.h>       
+#include <sys/stat.h>
 
 #define PORT 18000
 
@@ -13,50 +13,57 @@ typedef struct
 {
     int returncode;
     char *filename;
+    int type; // GIF JPEG PDF etc.
 } httpRequest;
 // headers to send to clients
 char *header200 = "HTTP/1.0 200 OK\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
 char *header400 = "HTTP/1.0 400 Bad Request\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
 char *header404 = "HTTP/1.0 404 Not Found\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
+char *headerJPEG = "HTTP/1.1 200 Ok\nContent-Type: image/jpeg\n\n";
+char *headerGIF = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: image/gif\n\n";
+char *headerMP3 = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: audio/mpeg\n\n";
+char *headerPDF = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: application/pdf\n\n";
+
 // ---- //
 // send a message to a socket file descripter
-int sendMessage(int fd, char *msg) {
+int sendMessage(int fd, char *msg)
+{
     return write(fd, msg, strlen(msg));
 }
 // Extracts the filename needed from a GET request and adds public_html to the front of it
-char * getFileName(char* msg)
+char *getFileName(char *msg)
 {
     // Variable to store the filename in
-    char * file;
+    char *file;
     // Allocate some memory for the filename and check it went OK
-    if( (file = malloc(sizeof(char) * strlen(msg))) == NULL)
+    if ((file = malloc(sizeof(char) * strlen(msg))) == NULL)
     {
         fprintf(stderr, "Error allocating memory to file in getFileName()\n");
         exit(EXIT_FAILURE);
     }
-    
+
     // Get the filename from the header
     sscanf(msg, "GET %s HTTP/1.1", file);
-    
-    // Allocate some memory not in read only space to store "public_html"
+
+    // Allocate some memory not in read o   nly space to store "public_html"
     char *base;
-    if( (base = malloc(sizeof(char) * (strlen(file) + 18))) == NULL)
+    if ((base = malloc(sizeof(char) * (strlen(file) + 18))) == NULL)
     {
         fprintf(stderr, "Error allocating memory to base in getFileName()\n");
         exit(EXIT_FAILURE);
     }
-    
-    char* ph = "public_html";
-    
+
+    char *ph = "public_html";
+
     // Copy public_html to the non read only memory
     strcpy(base, ph);
-    
+
     // Append the filename after public_html
     strcat(base, file);
-    
+
     // Free file as we now have the file name in base
     free(file);
-    
+
     // Return public_html/filetheywant.html
     return base;
 }
@@ -175,7 +182,16 @@ httpRequest parseRequest(char *msg)
     {
 
         ret.returncode = 200;
+        if (strchr(filename, 'jpeg') != NULL || strchr(filename, 'JPEG') != NULL)
+            ret.type = 1; // JPEG ( self-made var )
+        if (strchr(filename, 'gif') != NULL || strchr(filename, 'GIF') != NULL)
+            ret.type = 2; // GIF ( self-made var )
+        if (strchr(filename, 'mp3') != NULL || strchr(filename, 'MP3') != NULL)
+            ret.type = 3; // MP3 ( self-made var )
+        if (strchr(filename, 'pdf') != NULL || strchr(filename, 'PDF') != NULL)
+            ret.type = 4; // MP3 ( self-made var )
         ret.filename = filename;
+
         // Close the file stream
         fclose(exists);
     }
@@ -190,13 +206,22 @@ httpRequest parseRequest(char *msg)
     // Return the structure containing the details
     return ret;
 }
-int getHeaderSize(int fd, int returncode)
+int getHeaderSize(int fd, int returncode, int type)
 {
     // return match header size
     switch (returncode)
     {
     case 200:
-        sendMessage(fd, header200);
+        if (type == 1)
+            sendMessage(fd, headerJPEG);
+        else if (type == 2)
+            sendMessage(fd, headerGIF);
+        else if (type == 3)
+            sendMessage(fd, headerMP3);
+        else if (type == 4)
+            sendMessage(fd, headerPDF);
+        else
+            sendMessage(fd, header200);
         return strlen(header200);
         break;
 
@@ -311,7 +336,7 @@ int main(int argc, char const *argv[])
         free(header);
         // Get header size
         int headersize;
-        headersize = getHeaderSize(new_socket, details.returncode);
+        headersize = getHeaderSize(new_socket, details.returncode, details.type);
         // Print out the matched file
         int pagesize;
         pagesize = printFile(new_socket, details.filename);
