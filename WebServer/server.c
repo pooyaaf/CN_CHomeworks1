@@ -5,8 +5,10 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
-#define PORT 18000
+#define PORT 8080
+struct file_data *filedata; // load MIME FILES into this var
 
 // structure to hold the return code and the filepath to serve to client.
 typedef struct
@@ -14,17 +16,113 @@ typedef struct
     int returncode;
     char *filename;
     int type; // GIF JPEG PDF etc.
+    int content_length;
 } httpRequest;
+
+struct file_data
+{
+    int size;
+    void *data;
+};
+
 // headers to send to clients
 char *header200 = "HTTP/1.0 200 OK\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
 char *header400 = "HTTP/1.0 400 Bad Request\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
 char *header404 = "HTTP/1.0 404 Not Found\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
-char *headerJPEG = "HTTP/1.1 200 Ok\nContent-Type: image/jpeg\n\n";
-char *headerGIF = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: image/gif\n\n";
-char *headerMP3 = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: audio/mpeg\n\n";
-char *headerPDF = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: application/pdf\n\n";
+// char *headerJPEG = "HTTP/1.1 200 OK\nConnection: close\nContent-Type: image/jpeg\nContent-Length: 244480\n\n";
+// char *headerGIF = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: image/gif\n\n";
+// char *headerMP3 = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: audio/mpeg\n\n";
+// char *headerPDF = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: application/pdf\n\n";
 
-// ---- //
+// ---- // MIME SEND
+int send_response(int fd, char *header, char *content_type, void *body, int content_length)
+{
+    const int max_response_size = 262144;
+    char response[max_response_size];
+    int response_length;
+    time_t t = time(NULL);
+    struct tm *local_time = localtime(&t);
+    char *timestamp = asctime(local_time);
+
+    response_length = sprintf(response, "%s\nDate %s Connection: close\nContent-Type: %s\nContent-Length: %d\n\n", header, timestamp, content_type, content_length);
+    memcpy(response + response_length, body, content_length);
+    response_length += content_length;
+
+    // Send it all!
+    int rv = send(fd, response, response_length, 0);
+    if (rv < 0)
+    {
+        perror("send");
+    }
+
+    return rv;
+}
+
+struct file_data *file_load(char *filename)
+{
+    char *buffer, *p;
+    struct stat buf;
+    int bytes_read, bytes_remaining, total_bytes = 0;
+
+    // Get the file size
+    if (stat(filename, &buf) == -1)
+    {
+        return NULL;
+    }
+
+    // Make sure it's a regular file
+    if (!(buf.st_mode & S_IFREG))
+    {
+        return NULL;
+    }
+
+    // Open the file for reading
+    FILE *fp = fopen(filename, "rb");
+
+    if (fp == NULL)
+    {
+        return NULL;
+    }
+
+    // Allocate that many bytes
+    bytes_remaining = buf.st_size;
+    p = buffer = malloc(bytes_remaining);
+
+    if (buffer == NULL)
+    {
+        return NULL;
+    }
+
+    // Read in the entire file
+    while (bytes_read = fread(p, 1, bytes_remaining, fp), bytes_read != 0 && bytes_remaining > 0)
+    {
+        if (bytes_read == -1)
+        {
+            free(buffer);
+            return NULL;
+        }
+
+        bytes_remaining -= bytes_read;
+        p += bytes_read;
+        total_bytes += bytes_read;
+    }
+
+    // Allocate the file data struct
+    struct file_data *filedata = malloc(sizeof *filedata);
+
+    if (filedata == NULL)
+    {
+        free(buffer);
+        return NULL;
+    }
+
+    filedata->data = buffer;
+    filedata->size = total_bytes;
+
+    return filedata;
+}
+
+//-----//
 // send a message to a socket file descripter
 int sendMessage(int fd, char *msg)
 {
@@ -140,7 +238,6 @@ char *getMessage(int fd)
 httpRequest parseRequest(char *msg)
 {
     httpRequest ret;
-
     // A variable to store the name of the file they want
     char *filename;
     // Allocate some memory to filename and check it goes OK
@@ -151,7 +248,7 @@ httpRequest parseRequest(char *msg)
     }
     // Find out what page they want
     filename = getFileName(msg);
-
+    filedata = file_load(filename);
     // Check if its a directory traversal attack
     char *badstring = "..";
     char *test = strstr(filename, badstring);
@@ -182,7 +279,9 @@ httpRequest parseRequest(char *msg)
     {
 
         ret.returncode = 200;
-        if (strchr(filename, 'jpeg') != NULL || strchr(filename, 'JPEG') != NULL)
+        //    char *ext = strrchr(filename, '.');
+        //    if (strcmp(ext, "jpeg") == 0 || strcmp(ext, "jpg") == 0)
+        if (strchr(filename, 'jpg') != NULL || strchr(filename, 'jpeg') != NULL)
             ret.type = 1; // JPEG ( self-made var )
         if (strchr(filename, 'gif') != NULL || strchr(filename, 'GIF') != NULL)
             ret.type = 2; // GIF ( self-made var )
@@ -213,16 +312,28 @@ int getHeaderSize(int fd, int returncode, int type)
     {
     case 200:
         if (type == 1)
-            sendMessage(fd, headerJPEG);
+        {
+            send_response(fd, "HTTP/1.1 200 OK", "image/jpg", filedata->data, filedata->size);
+        }
+
         else if (type == 2)
-            sendMessage(fd, headerGIF);
+        {
+            send_response(fd, "HTTP/1.1 200 OK", "image/gif", filedata->data, filedata->size);
+        }
         else if (type == 3)
-            sendMessage(fd, headerMP3);
+        {
+            send_response(fd, "HTTP/1.1 200 OK", "audio/mpeg", filedata->data, filedata->size);
+        }
         else if (type == 4)
-            sendMessage(fd, headerPDF);
+        {
+            send_response(fd, "HTTP/1.1 200 OK", "application/pdf", filedata->data, filedata->size);
+        }
         else
+        {
             sendMessage(fd, header200);
-        return strlen(header200);
+            return strlen(header200);
+        }
+
         break;
 
     case 400:
