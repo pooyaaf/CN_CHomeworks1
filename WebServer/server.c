@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define PORT 8080
+#define PORT 18000
 struct file_data *filedata; // load MIME FILES into this var
 
 // structure to hold the return code and the filepath to serve to client.
