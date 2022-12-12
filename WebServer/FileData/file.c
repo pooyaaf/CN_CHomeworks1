@@ -95,3 +95,9 @@ int printFile(int fd, char *filename)
     // Return how big the file we sent out was
     return totalsize;
 }
+
+// send a message to a socket file descripter
+int sendMessage(int fd, char *msg)
+{
+    return write(fd, msg, strlen(msg));
+}

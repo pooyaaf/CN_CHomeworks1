@@ -7,33 +7,16 @@
 #include <sys/stat.h>
 #include <time.h>
 #include "FileData/file.h"
-
-#define PORT 18000
+#include "fileData.h"
 struct file_data *filedata; // load MIME FILES into this var
 
-// structure to hold the return code and the filepath to serve to client.
-typedef struct
-{
-    int returncode;
-    char *filename;
-    int type; // GIF JPEG PDF etc.
-    int content_length;
-} httpRequest;
 
-struct file_data
-{
-    int size;
-    void *data;
-};
+
 
 // headers to send to clients
 char *header200 = "HTTP/1.0 200 OK\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
 char *header400 = "HTTP/1.0 400 Bad Request\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
 char *header404 = "HTTP/1.0 404 Not Found\nServer: CS241Serv v0.1\nContent-Type: text/html\n\n";
-// char *headerJPEG = "HTTP/1.1 200 OK\nConnection: close\nContent-Type: image/jpeg\nContent-Length: 244480\n\n";
-// char *headerGIF = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: image/gif\n\n";
-// char *headerMP3 = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: audio/mpeg\n\n";
-// char *headerPDF = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: application/pdf\n\n";
 
 // ---- // Start socket
 int start_socket(int port)
@@ -153,13 +136,6 @@ struct file_data *file_load(char *filename)
     filedata->size = total_bytes;
 
     return filedata;
-}
-
-//-----//
-// send a message to a socket file descripter
-int sendMessage(int fd, char *msg)
-{
-    return write(fd, msg, strlen(msg));
 }
 
 // get a message from the socket until a blank line is recieved

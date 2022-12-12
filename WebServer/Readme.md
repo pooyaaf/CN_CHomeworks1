@@ -5,6 +5,8 @@ Computer Networks - Fall 2022
 ## Web Server
 Implemented a simple HTTP Web Server using cpp and socket programming, on http://localhost:18000.
 
+You can use other ports also using %your_server:<port_number> command
+
 Any bad sequence would respond 404.html
 > http://localhost:18000/404.html
 
@@ -132,3 +134,8 @@ Here we list out some common file extension and their Content Type.
 <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types">More Content Types Here</a>
 
 ## Explain files
+* server file is main logic of the program and handles socket logic.
+* FileData Folder contains:
+    - file files which are file functions like opening public_html file path and etc.
+* public_html folder contains test files like a.pdf
+* client would show server <-> client console responses.
