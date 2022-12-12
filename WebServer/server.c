@@ -35,6 +35,38 @@ char *header404 = "HTTP/1.0 404 Not Found\nServer: CS241Serv v0.1\nContent-Type:
 // char *headerMP3 = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: audio/mpeg\n\n";
 // char *headerPDF = "HTTP/1.0 200 Ok\nServer: CS241Serv v0.1\nContent-Type: application/pdf\n\n";
 
+// ---- // Start socket
+int start_socket(int port)
+{
+    int server_fd;
+    struct sockaddr_in address;
+
+   // Creating socket file descriptor
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    {
+        perror("In socket");
+        exit(EXIT_FAILURE);
+    }
+
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(port);
+
+    memset(address.sin_zero, '\0', sizeof address.sin_zero);
+
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
+    {
+        perror("In bind");
+        exit(EXIT_FAILURE);
+    }
+    if (listen(server_fd, 10) < 0)
+    {
+        perror("In listen");
+        exit(EXIT_FAILURE);
+    }
+
+    return server_fd;
+}
 // ---- // MIME SEND
 int send_response(int fd, char *header, char *content_type, void *body, int content_length)
 {
@@ -320,32 +352,16 @@ int main(int argc, char const *argv[])
     struct sockaddr_in address;
     int addrlen = sizeof(address);
 
-    // Only this line has been changed. Everything is same.
-    // char *hello = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello world!";
+    char userAddress[30]; // %your_server:<port> | localhost:<port_number>
+    scanf("%s", &userAddress);
+    char * separator = ":";
+    char * userLocation = strtok(userAddress, separator);
+    char * c = strtok(NULL, "");
+    int userPort;
+    sscanf(c, "%d", &userPort);
+    server_fd = start_socket((int)userPort);
+    printf("The Webserver is up on %s, with port: %d",userLocation,userPort);
 
-    // Creating socket file descriptor
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
-    {
-        perror("In socket");
-        exit(EXIT_FAILURE);
-    }
-
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
-
-    memset(address.sin_zero, '\0', sizeof address.sin_zero);
-
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
-    {
-        perror("In bind");
-        exit(EXIT_FAILURE);
-    }
-    if (listen(server_fd, 10) < 0)
-    {
-        perror("In listen");
-        exit(EXIT_FAILURE);
-    }
     while (1)
     {
         printf("\n+++++++ Waiting for new connection ++++++++\n\n");
