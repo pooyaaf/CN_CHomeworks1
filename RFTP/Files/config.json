@@ -1,0 +1,21 @@
+{
+    "commandPort": 8080,
+    "dataPort":8081,
+    "users": [
+      {
+          "user": "Reyhane",
+          "password": "123",
+          "admin": "true",
+          "size": "1000000"
+      },
+      {
+          "user": "Narges",
+          "password": "321",
+          "admin": "false",
+          "size": "1000"
+      }
+    ],
+      "files": [
+        "config.json"
+      ]
+  }
