@@ -2,6 +2,7 @@ CC = g++
 FLAGS = -std=c++11
 COMPILE_FLAGS = $(FLAGS) -c
 BUILD_DIR = build
+SERVER_FILES_DIR = Files
 
 OBJECT_FILES = $(BUILD_DIR)/Client.o $(BUILD_DIR)/Server.o $(BUILD_DIR)/User.o $(BUILD_DIR)/Config.o $(BUILD_DIR)/Command.o
 
@@ -36,3 +37,4 @@ $(BUILD_DIR)/Command.o: library/User.h library/Command.h library/Constant.h sour
 clean:
 	rm *.out
 	rm -rf $(BUILD_DIR)	
+	rm -rf $(SERVER_FILES_DIR)	
