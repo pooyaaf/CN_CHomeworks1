@@ -325,10 +325,11 @@ string Command::downloadFile()
         readFile.seekg(0, ios::end);
         int fileSize = readFile.tellg();
                 
-        if (!users[onlineUser]->isAbleToDownload(fileSize))
+        if (!users[onlineUser]->isAbleToDownload(fileSize)||fileSize>UPLOAD_LIMIT)
         {
             cmdChannel = DOWNLOAD_LIMIT_A;
-            action += (users[onlineUser]->getName() + COLON + "Download failed cuz connection." + NEWL);
+            string ISupload = fileSize>UPLOAD_LIMIT ? "file size limit" : "user connection";
+            action += (users[onlineUser]->getName() + COLON + "Download failed due to " + ISupload + "." + NEWL);
             return action;
         }
 
@@ -377,13 +378,14 @@ string Command::uploadFile()
         readFile.seekg(0, ios::end);
         int fileSize = readFile.tellg();
                 
-        if (!users[onlineUser]->isAbleToDownload(fileSize)|fileSize>UPLOAD_LIMIT)
+        if (!users[onlineUser]->isAbleToDownload(fileSize)||fileSize>UPLOAD_LIMIT)
         {
             cmdChannel = DOWNLOAD_LIMIT_A;
-            string ISupload = fileSize>UPLOAD_LIMIT ? "size limit of file" : "user connection";
-            action += (users[onlineUser]->getName() + COLON + "Upload failed cuz " + ISupload + "." + NEWL);
+            string ISupload = fileSize>UPLOAD_LIMIT ? "file size limit" : "user connection";
+            action += (users[onlineUser]->getName() + COLON + "Upload failed due to " + ISupload + "." + NEWL);
             return action;
         }
+
 
         string whole = toStringConverter(directory);
         string server = getServerDirectory(currentDirectory);
