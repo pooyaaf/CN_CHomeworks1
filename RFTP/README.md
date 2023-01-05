@@ -6,6 +6,7 @@ FTP server: simple FTP server with 2 Client & Server parts, in order to control 
 ___
 This program is implemented in object oriented c++ programming. For each entity in the program, separate classes are considered as follows:    
 
+## Section 0 - Basic explanations about the logic of the program 
 - ### [Configuration class](#configuration-class)
 - ### [Server class](#server-class)
 - ### [Client class](#client-class)
@@ -671,4 +672,438 @@ void Command::resetChannels()
     cmdChannel = EMPTY;
     dataChannel = EMPTY;
 }
+```
+## Section 1- Introduction
+```json
+{
+    "commandPort": 8080,
+    "dataPort":8081,
+    "users": [
+      {
+          "user": "Reyhane",
+          "password": "123",
+          "admin": "true",
+          "size": "1000000"
+      },
+      {
+          "user": "Narges",
+          "password": "321",
+          "admin": "false",
+          "size": "1000"
+      }
+    ],
+      "files": [
+        "config.json"
+      ]
+  }
+```
+```cpp
+int main(int argc, char * argv[])
+{
+    if(!Server::get_instance()->initiate())
+        cout << "The server could not be built" << endl;
+
+    return 0;
+}
+
+```
+We choose 2 ports for command and date server respectively.
+In `Server.cpp` we run main(server), recording to instance we create, server become active and then clients can connect to the server. Using make file we have 2 client and server out part, so we run them in seperate terminal windows.    
+ ![s1-0](https://github.com/pooyaaf/CN_CHomeworks1/blob/beb955db9eabf447301a8235aabfdc6e140d32ab/RFTP/IMG/s1-0.png "s1-0") 
+ ![s1-1](https://github.com/pooyaaf/CN_CHomeworks1/blob/beb955db9eabf447301a8235aabfdc6e140d32ab/RFTP/IMG/s1-1.png "s1-1") 
+## Section 2- Authentication and access management
+In `config.json`, we create system users information.
+Since the authentication starts on the server, we create the configuration class on the server and use it to have the user information and store it as a vector from the user class.    
+In the server, the task is divided and the `command.cpp` would done rest of the work, which performs the task/activity given to it by the server.    
+Now we will examine the user and pass commands.    
+user command:    
+If the user enters the user command, it is first checked that the user has not been logged in before, because if he/her has logged in, the system will not accept the login again (because the commands do not have an ID, and there is no IP or something like that to distinguish the commands). After this, it checks whether the username exists in the system or not. which is printed if there is no corresponding error. If there is a user, a login message will be sent, and the user's status will change to waiting for a password. Also, we save the ID of the client from which the name of the user is entered to make sure that they are logged in to the same client.
+In this section, we have a string called `action`, which according to the project, prepares information such as the person who entered for the `log file`.
+```cpp
+string Command::loginUser(int socket)
+{
+    resetChannels();
+    string action = "";
+    if(!isLogin())
+    {
+        bool check = false;
+        for(int i = 0 ; i < users.size() ; i++)
+            if(!wordsOfCmd[PARA1].compare(users[i]->getName()) && !users[i]->getStatus())
+            {
+                cmdChannel = USER_ACCEPTED_A;
+                users[i]->setClientID(socket);
+                users[i]->setUserStatus(WAIT_FOR_PASS);
+                action += (users[i]->getName() + COLON + "Has entered username." + NEWL);
+                check = true;
+            }
+        if(!check)
+        {
+            cmdChannel = INVALID_USER_PASS_A;
+            action += ("User entered wrong username.\n");
+        }
+    }
+    else
+    {
+        cmdChannel = TOTAL_ERRORS_A;
+        action += ("User disturbing another user.\n");
+    }
+    return action;
+}
+```
+pass command:
+The user's password string is entered along with the pass command. First, we check that the password and username are in the same client. If there is a user whose status is waiting for a password, we check the password registered in the system for that user with the value of the password entered next to the pass command. If they were the same, we change the user's status to logged in and send a successful login message and change the onlineUser value to this user's number. Otherwise, if the clients are not the same and the password is wrong, we will give the password error message. It is also possible that no user has logged in, in which case the message "No user has logged in" will be sent.
+Similarly, since we are in the login stage, we store this information in the `action` variable to be saved in the `log file`.
+```cpp
+string Command::checkPass(int socket)
+{
+    resetChannels();
+    string action = "";
+    if(!isLogin())
+    {
+        bool check = false;
+        for(int i = 0 ; i < users.size() ; i++)
+            if (socket == users[i]->getClientID())
+                if(users[i]->getStatus() == WAIT_FOR_PASS)
+                {
+                    check = 1;
+                    if(!wordsOfCmd[PARA1].compare(users[i]->getPass()))
+                    {
+                        cmdChannel = USER_SUCCESSFUL_LOGIN_A;
+                        users[i]->setUserStatus(ENTERED);
+                        onlineUser = i;
+                        action += (users[i]->getName() + COLON + "Has successfully logged in." + NEWL);
+                        break;
+                    }
+                    else
+                    {
+                        cmdChannel = INVALID_USER_PASS_A;
+                        action += (users[i]->getName() + COLON + "Has entered wrong password." + NEWL);
+                    }
+                }
+            
+        if(!check)
+        {
+            cmdChannel = CLIENT_NOT_LOG_A;
+            action += ("User hasn't enter username.\n");
+        }
+    }
+    else
+    {
+        cmdChannel = TOTAL_ERRORS_A;
+        action += ("User disturbing another user.\n");
+    }
+    return action;
+}
+```
+See code outputs:
+ ![s2-0](https://github.com/pooyaaf/CN_CHomeworks1/blob/a30f6022b13f64dd483b14bd8633369dcdbf22ef/RFTP/IMG/s2-0.png "s2-0") 
+At first, we enter the user in the above terminal and give a name outside of the config names and get the said error. Then, in the same terminal, we do not give the user argument and get the corresponding error. Now we enter the correct user name in the lower terminal, we enter the password of the same user to see that it is not entered from a different client, according to the output, this result was also achieved and the error that one must enter the name in order and then enter the password has been transferred. Then we ask for one of the services in the lower terminal, and since no one has logged in in the lower client, the error of entering the account is output. Then in the lower terminal we enter a command that is not supported at all (this is for later parts) and we get the corresponding error as expected. Then we enter the user's password in the upper terminal and get the output as expected, and in the lower terminal we enter the user's password again to correctly show the error of non-observance of order.    
+ ![s2-1](https://github.com/pooyaaf/CN_CHomeworks1/blob/a30f6022b13f64dd483b14bd8633369dcdbf22ef/RFTP/IMG/s2-1.png "s2-1") 
+In this section, the difference between user and admin is mentioned, and it is true that the command used will be introduced in the next sections, but we will use that command to show the output of this section. As we saw in the config.json file, the file that only has access to it is this file and the admin is called Reyhane, and other users should not have access to this file, and logically we do not expect that Narges user has access to it.
+The code has already been explained that we have a function called isAdmin from which we can determine whether the user is able to perform the command or not.
+## Section 3- Download file
+‍‍‍‍‍‍    
+```cpp
+string Command::downloadFile()
+{
+    resetChannels();
+    string action = "";
+    if(isLogin())
+    {
+        if (fileIsSecure(wordsOfCmd[PARA1]) && !users[onlineUser]->getIsAdmin())
+        {
+            cmdChannel = FILE_ACCESS;
+            action += (users[onlineUser]->getName() + COLON + 
+                "Permission denied on file named " + wordsOfCmd[PARA1] + "." + NEWL);
+            return action;
+        }
+
+        string directory = currentDirectory + wordsOfCmd[PARA1];
+        ifstream readFile(directory, ios::binary);
+        readFile.seekg(0, ios::end);
+        int fileSize = readFile.tellg();
+                
+        if (!users[onlineUser]->isAbleToDownload(fileSize)||fileSize>UPLOAD_LIMIT)
+        {
+            cmdChannel = DOWNLOAD_LIMIT_A;
+            string ISupload = fileSize>UPLOAD_LIMIT ? "file size limit" : "user connection";
+            action += (users[onlineUser]->getName() + COLON + "Download failed due to " + ISupload + "." + NEWL);
+            return action;
+        }
+
+        string whole = toStringConverter(directory);
+        makeFileInDirectory(whole, wordsOfCmd[PARA1], "");
+
+        cmdChannel = SUCCESSFUL_DOWNLOAD_A;
+        dataChannel = whole;
+        action += (users[onlineUser]->getName() + COLON + 
+                    "Has successfully downloaded file named " + wordsOfCmd[PARA1] + "." + NEWL);
+        users[onlineUser]->decDownloadSize(fileSize);
+                
+    }
+    return action;
+}
+```
+First, in the `resetchannels` function, we empty the output channels to save the result of the activity, then in `isLogin`, we check whether there is a user for the input command or not, and according to the result, it shows the errors we checked earlier. Now the permission of the file is checked for the user`fileIsSecure(wordsOfCmd[PARA1]) && !users[onlineUser]->getIsAdmin()`, if the file is confidential, the user must be an admin, otherwise it will get an error and the work will be finished. Then we get the size of the file and give it as input to the `isAbleToDownload` function and also check that it does not exceed the size mentioned in the project (1024 KB). If the value of true is returned from the function, it means that we have enough volume to download the file, otherwise, if each option is rejected, it is checked which option caused the failure and ends as a failed activity.
+```cpp
+void makeFileInDirectory(string context, string sourceDir, string destDir)
+{
+    fstream recent;
+    ofstream res;
+    string name = extractFileName(sourceDir);
+    recent.open(destDir + name);
+    // cerr<<"\nname, source, dest: "<< name << ", "<< sourceDir << ", " <<destDir<<"\n";
+
+    if (!recent) // not exist
+        res.open(destDir + name);
+    else // existing file (wasnt necessary to handle duplicate)
+        res.open(destDir + name);
+
+    res << context;
+    res.close();
+}
+```
+If it is not finished, then we read the contents of the file and with the help of the `makeFileInDirectory` function, we download the file in the place where the user is and send the content to the user through the data channel and the command channel, which receives the success.
+In the description of the `makeFileInDirectory` function, I should say that it has three inputs, the names of the `content`, the `source` path, and the `destination` path.
+The content is obviously the same content that was read from the file. The source path is the input of the command, which may be any location that the user has given to download the file from, so its name must also be extracted if it is from another location that we have the name of the file when downloading, that is why we also have an `extractFileName` function. 
+```cpp
+string extractFileName(string addr)
+{
+    size_t pos = addr.find_last_of(BACK_SLASH);
+    if (pos == string::npos)
+        return addr;
+
+    string res = addr.substr(pos+1, addr.size());
+    return res;
+}
+```
+Which checks according to the input address, if there is a slash, the name of the file is from the last slash, otherwise, if it does not have a slash, it is in the same directory and the file name is the same. The destination path is the place where the file should be saved, which is the same location as the user is in downloading, so we leave it empty, but in uploading, we have to give the address of the server files.    
+ ![s3-0](https://github.com/pooyaaf/CN_CHomeworks1/blob/ba1ef063257d00b2904f4315674a1dc0ec839499/RFTP/IMG/s3-0.png "s3-0") 
+To show the result of the code, we use this method that the user Narges has a small volume and cannot download the c file, but the user Reyhane has enough volume to download the file, and we can also download the locked file by this user and see the result. On the other hand, the download of the file that is in the same place will not be seen because it has the same name and nothing has changed (of course, we duplicated it, but since it was not included in the project, we deleted it because it had different algorithms that were not needed). For this reason, we download another file from the external folder to complete it.
+## Section 4- Upload file
+    
+```cpp
+string Command::uploadFile()
+{
+    resetChannels();
+    string action = "";
+    if(isLogin())
+    {
+        if (fileIsSecure(wordsOfCmd[PARA1]) && !users[onlineUser]->getIsAdmin())
+        {
+            cmdChannel = FILE_ACCESS;
+            action += (users[onlineUser]->getName() + COLON + 
+                "Permission denied on file named " + wordsOfCmd[PARA1] + "." + NEWL);
+            return action;
+        }
+
+        string directory = currentDirectory + wordsOfCmd[PARA1];
+        ifstream readFile(directory, ios::binary);
+        readFile.seekg(0, ios::end);
+        int fileSize = readFile.tellg();
+                
+        if (!users[onlineUser]->isAbleToDownload(fileSize)||fileSize>UPLOAD_LIMIT)
+        {
+            cmdChannel = DOWNLOAD_LIMIT_A;
+            string ISupload = fileSize>UPLOAD_LIMIT ? "file size limit" : "user connection";
+            action += (users[onlineUser]->getName() + COLON + "Upload failed due to " + ISupload + "." + NEWL);
+            return action;
+        }
+
+
+        string whole = toStringConverter(directory);
+        string server = getServerDirectory(currentDirectory);
+
+        makeFileInDirectory(whole, wordsOfCmd[PARA1], server);
+
+        cmdChannel = SUCCESSFUL_DOWNLOAD_A;
+        dataChannel = whole;
+        action += (users[onlineUser]->getName() + COLON + 
+                    "Has successfully uploaded file named " + wordsOfCmd[PARA1] + "." + NEWL);
+        users[onlineUser]->decDownloadSize(fileSize);
+                
+    }
+    return action;
+}
+```
+This section is same as download section with one different, that the uploading location is in base directory, which we get it from `getServerDirectory` function which give the correct destination directory.    
+ ![s4-0](https://github.com/pooyaaf/CN_CHomeworks1/blob/3274ca6d2dd1c07711324a58e4aafa6a1564bdcd/RFTP/IMG/s4-0.png "s4-0")
+For output we just show to uploading format, and server downloading dir named `Files`.
+## Section 5- Help
+We have a string which stores all instructions explenations.
+```cpp
+void Command::help()
+{
+    resetChannels();
+    if(isLogin())
+    {
+        cmdChannel = HELP_TAG_A; 
+        cmdChannel += USER_HELP_DEC;
+        cmdChannel += PASS_HELP_DEC;
+        cmdChannel += PWD_HELP_DEC;
+        cmdChannel += MKD_HELP_DEC; 
+        cmdChannel += DELE_HELP_DEC; 
+        cmdChannel += LS_HELP_DEC; 
+        cmdChannel += CWD_HELP_DEC; 
+        cmdChannel += RENAME_HELP_DEC; 
+        cmdChannel += RETR_HELP_DEC;
+        cmdChannel += UPLOAD_HELP_DEC;
+        cmdChannel += HELP_HELP_DEC; 
+        cmdChannel += QUIT_HELP_DEC; 
+    }
+}
+```
+ ![s5-0](https://github.com/pooyaaf/CN_CHomeworks1/blob/0d42b52efb9e4f9592bf070c519333934d58d5f3/RFTP/IMG/s5-0.png "s5-0")
+## Section 6- Quit
+In this section, we change all user statuses to not logged in and also change the onlineUser number to -1, which means that no user is online anymore in this client.
+```cpp
+void Command::quit()
+{
+    resetChannels();
+    if(isLogin())
+    {
+        users[onlineUser]->setUserStatus(NOT_ENTERED);
+        onlineUser = -1;
+        cmdChannel = USER_SUCCESSFUL_LOGOUT_A;
+    }
+}
+```
+ ![s6-0](https://github.com/pooyaaf/CN_CHomeworks1/blob/0d42b52efb9e4f9592bf070c519333934d58d5f3/RFTP/IMG/s6-0.png "s6-0")
+## Section 7- Management of errors
+In each section, if there is a possibility of an error, a check was made and an error message was sent if necessary.
+But in summary, we show some of them:
+ ![s7-0](https://github.com/pooyaaf/CN_CHomeworks1/blob/0d42b52efb9e4f9592bf070c519333934d58d5f3/RFTP/IMG/s7-0.png "s7-0")
+First, in the lower terminal where there is no user, we enter the service command and get the expected output.
+In the lower terminal, we enter the command command again, but in such a way that it is not defined and the type of definition and argument is wrong, and we output the corresponding error.
+In the above terminal, we log in the user and in his login, we log in another user, and because the user is not logged out, we have an error.
+Likewise, we define a completely irrelevant command and get an error.
+## Section 8- Managing the volume of users
+As explained in the download section, the `isAbleToDownload` function was used to check the sufficient volume for downloading, and after downloading, the corresponding file volume was deducted from the user's total volume.
+```cpp
+bool User::isAbleToDownload(int decSize)
+{
+    if(downladSize - decSize > 0)
+        return true;
+    return false;
+}
+
+```
+The result of this section is exactly stated in the previous examples, so for convenience, we bring the same ones:
+ ![s8-0](https://github.com/pooyaaf/CN_CHomeworks1/blob/0d42b52efb9e4f9592bf070c519333934d58d5f3/RFTP/IMG/s8-0.png "s8-0")
+## Section 9- Client
+Was explained in Client class.
+## Section 10- Login
+We designed this part so that if the file doesn't exist, it will create it and if it does exist, it will continue to write to it because we want the server memory to be saved, and we can check it if we need it in the future.    
+With the help of time, we can find the current time. We did this part on the server because the activities are done with the help of the server and on the server, and when we put this on the server, we saw that it is like a backup and keeping the information of the server yard, that's why we kept it there.    
+The initial creation of the file, which is done after the creation of the server, is how the creatLogFile function is called in the server constructor, and here we create the file if it is not there, and if it is, we use it and continue to write it.    
+During the operation and activity of the server, the same few specific commands were mentioned (which was entering, creating, deleting, and downloading the file), in the case of the project, we write it in our `log.txt` file with the help of the addToLog function, and the process is like this: the command class `Command.cpp`, which processes the commands, checks the specific commands mentioned and prepares the output and gives it to the server in the form of a string, and the server writes to the file with the help of this function. First, it enters the time with the help of library functions and then enters the activity.    
+Show the functions related to the loger:    
+```cpp
+Server* Server::instance = nullptr;
+
+Server* Server::get_instance() {
+    Configuration config = Configuration(PATH);
+    if (instance == nullptr)
+        instance = new Server(config);
+    return instance;
+}
+
+ //just to make sure no other class instantiates Server
+Server::Server(Configuration configuration) : config(configuration)
+{
+    
+    commandPort = configuration.getCommandPort();
+    dataPort = configuration.getDataPort();
+    createLogFile();
+}
+```
+```cpp
+void Server::createLogFile()
+{
+    logFile.open(LOG_FILE_NAME, fstream::in | fstream::out | fstream::app);
+
+    if (!logFile) 
+    {
+        cout << NO_LOG_FILE;
+        logFile.open(LOG_FILE_NAME,  fstream::in | fstream::out | fstream::trunc);
+        logFile.close();
+    } 
+}
+
+```
+```cpp
+void Server::addToLog(string action)
+{
+    system_clock::time_point currentTime = system_clock::now();
+    time_t cT = system_clock::to_time_t(currentTime);
+    logFile.open(LOG_FILE_NAME, fstream::in | fstream::out | fstream::app);
+     
+    logFile << ctime(&cT);
+    logFile << action;
+    logFile.close();
+
+}
+```
+Now we display the results of the commands stored in the logger:    
+ ![s10-0](https://github.com/pooyaaf/CN_CHomeworks1/blob/0d42b52efb9e4f9592bf070c519333934d58d5f3/RFTP/IMG/s10-0.png "s10-0")    
+Now we show the location of the file in the project folder:    
+ ![s10-1](https://github.com/pooyaaf/CN_CHomeworks1/blob/0d42b52efb9e4f9592bf070c519333934d58d5f3/RFTP/IMG/s10-1.png "s10-1")    
+Now we show the string output of the corresponding functions:    
+ ![s10-2](https://github.com/pooyaaf/CN_CHomeworks1/blob/f0aca8daf53240b54e981a18ec7d31a67c8d2dfd/RFTP/IMG/s10-2.png "s10-2")    
+Lines USER, PASS, MKD, DELE, RETR, UPLOAD are exactly the commands that we need to save the result in the logger. For this reason, they are of the string type that goes to the server through the command class and writes to the logger file through the named function.    
+Now we show the part that is transferred from the data command to the logger function:    
+```cpp
+void Server::distinguishCommand(int socketFD, char* cmd)
+{
+    vector<string> wordsOfCmd = splitter(cmd);
+    commands[socketFD]->setWordOfCommand(wordsOfCmd);
+    CMDtype order = getCMDType(wordsOfCmd);
+    
+    switch (order)
+    {
+        case USER:
+            addToLog(commands[socketFD]->loginUser(allClientsFD[socketFD].first));
+            break;
+        case PASS:
+            addToLog(commands[socketFD]->checkPass(allClientsFD[socketFD].first));
+            break;
+        case PWD:
+            commands[socketFD]->getCurrentDirectory();
+            break;
+        case MKD:
+            addToLog(commands[socketFD]->makeNewDirectory());
+            break;
+        case DELE:
+            addToLog(commands[socketFD]->delDirectory());
+            break;
+        case LS:
+            commands[socketFD]->getFileList();
+            break;
+        case CWD:
+            commands[socketFD]->changeDirectory(wordsOfCmd.size());
+            break;
+        case RENAME:
+            commands[socketFD]->renameFile();
+            break;
+        case RETR:
+            addToLog(commands[socketFD]->downloadFile());
+            break;
+        case UPLOAD:
+            addToLog(commands[socketFD]->uploadFile());
+            break;
+        case HELP:
+            commands[socketFD]->help();
+            break;
+        case QUIT:
+            commands[socketFD]->quit();
+            break;
+        case ARGPAR_ERR:
+            commands[socketFD]->setInvalActivity(PARA_SYNTAX_ERROR_A);
+            break;
+        case NOT_EXIST:
+            commands[socketFD]->setInvalActivity(TOTAL_ERRORS_A);
+            break;
+    }
+}
+
 ```
