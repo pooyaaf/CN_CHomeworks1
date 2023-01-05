@@ -389,3 +389,286 @@ bool Server::initiate()
 }
 ```
 ### <a name="client-class"></a> Client class
+The private fields of this class are `clientDataFileDes` and `clientCmdFileDes`, which are ports for data and command channels. There are three char arrays to store command, command channel output and data channel output respectively.
+```cpp
+#ifndef CLIENT_H
+#define CLIENT_H "CLIENT_H"
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <iostream>
+#include <stdlib.h>
+#include <unistd.h>
+#include <cstring>
+#include <stdio.h>
+#include <errno.h>
+#include <vector>
+
+#include "Config.h"
+
+#define PATH  "config.json"
+#define CMD_SIGN "> "
+
+const int CMD_MAX_LEN = 128; // Maximum command length.
+const int CMD_OUT_LEN = 8048; // Maximum command length received in telecommunications. 
+const int DATA_OUT_LEN = 8048; // Maximum data length received in telecommunications.
+const char* IP_ADDRESS = "127.0.0.1"; // The address 127.0. 0.1 is the standard address for IPv4 loopback traffic.
+const std::string CLIENT_ERR = "Client could not be initiate.";
+const std::string CONFIG_ADDRESS = "configuration/config.json"; // Config file path.
+const std::string CMD_OUTPUT_COUT = "Command output: ";
+const std::string DATA_OUTPUT_COUT = "Data output: ";
+
+class Client 
+{
+public:
+    Client() = default;
+
+    bool initiate(int commandPort, int dataPort);
+
+private:
+    bool invalidInitiating(int commandPort, int dataPort);
+    bool ISserverActive();
+
+    char cmd[CMD_MAX_LEN];
+    char outputCmd[DATA_OUT_LEN] = {0};
+    char outputData[CMD_OUT_LEN] = {0};
+
+    int clientCmdFileDes; // Client command file descriptor.
+    int clientDataFileDes; // Client command file descriptor.
+
+    static constexpr int MAX_COMMAND_LENGTH = 128;
+
+};
+
+#endif
+```
+The `invalidInitiating` function checks whether a client can be formed or not, and if there are no problems, the new client is added to the channel.
+```cpp
+bool Client::invalidInitiating(int commandPort, int dataPort)
+{
+    clientCmdFileDes = socket(AF_INET, SOCK_STREAM, 0);
+    if (clientCmdFileDes < 0)
+        return true;
+    struct sockaddr_in serverCmdAddr;
+    serverCmdAddr.sin_family = AF_INET;
+    serverCmdAddr.sin_port = htons(commandPort);
+    serverCmdAddr.sin_addr.s_addr = inet_addr(IP_ADDRESS);
+    if (inet_pton(AF_INET, IP_ADDRESS, &serverCmdAddr.sin_addr) <= 0)
+        return true;
+    if (connect(clientCmdFileDes, (struct sockaddr*)&serverCmdAddr, sizeof(serverCmdAddr)) < 0)
+        return true;
+
+
+    clientDataFileDes = socket(AF_INET, SOCK_STREAM, 0);
+    if (clientDataFileDes < 0)
+        return true;
+    struct sockaddr_in serverDataAddr;
+    serverDataAddr.sin_family = AF_INET;
+    serverDataAddr.sin_port = htons(dataPort);
+    serverDataAddr.sin_addr.s_addr = inet_addr(IP_ADDRESS);
+    if (inet_pton(AF_INET, IP_ADDRESS, &serverDataAddr.sin_addr) <= 0)
+        return true;
+    if (connect(clientDataFileDes, (struct sockaddr*)&serverDataAddr, sizeof(serverDataAddr)) < 0)
+        return true;
+    
+    return false;
+}
+```
+In `initiate`, the client checks whether it can connect to the server using the invalidInitiating function. If it can, the client is created and then it enters an endless loop that enters its commands and receives the output of the command channel and then the output of the data channel through two recvs.
+```cpp
+bool Client::initiate(int commandPort, int dataPort) 
+{
+    // Unsuccessful in initiating. 
+    if (invalidInitiating(commandPort,dataPort))
+        return false;
+
+    while (true) 
+    {
+        // Receive command from command line.
+        cout << CMD_SIGN;
+        memset(cmd, 0, MAX_COMMAND_LENGTH);
+        cin.getline(cmd, CMD_MAX_LEN);
+
+        // Send command to server.
+        send(clientCmdFileDes, cmd, CMD_MAX_LEN, 0);
+
+        // Receive command output from server and show in command line.
+        memset(outputCmd, 0, sizeof outputCmd);
+        recv(clientCmdFileDes, outputCmd, sizeof(outputCmd), 0);
+        cout << CMD_OUTPUT_COUT << outputCmd << endl;
+
+        // Receive data output from server and show in command line.
+        memset(outputData, 0, sizeof outputData);
+        recv(clientDataFileDes, outputData, sizeof(outputData), 0);
+        cout << DATA_OUTPUT_COUT << outputData << endl;
+
+    }
+
+    return true;
+}
+```
+### <a name="user-class"></a> User class
+Explanation of private fields:
+```cpp
+#ifndef USER_H_
+#define USER_H_ "USER_H"
+
+#include <string>
+
+#define NOT_ENTERED 0
+#define WAIT_FOR_PASS 1
+#define ENTERED 2
+
+class User
+{
+public:
+    User(std::string username_, std::string pass_, bool isAdmin_, 
+            int downladSize_, std::string orgAddress_);
+    std::string getName();
+    std::string getPass();
+    bool getIsAdmin();
+    int getDSize();
+    int getStatus();
+    void setUserStatus(int status);
+    void decDownloadSize(int decSize);
+    bool isAbleToDownload(int decSize);
+    std::string getOrgAddr();
+    void setClientID(int clientID_);
+    int getClientID();
+
+private:
+    std::string orgAddress;
+    std::string username;
+    std::string pass;
+    bool isAdmin;
+    int downladSize;
+    int userStatus;
+    int clientID;
+};
+
+
+#endif
+```
+`username`: User name, `pass`: Password, User address: `orgAddress`(project base), Is this user admin or not: `isAdmin`, The amount of size that this user can download: `downloadSize`, What is the status of this user? Is it not logged in? Either it is waiting for the login password or it is entered into the system: `userStatus`, the `clientID` field is because if the user has entered his username on the other side, he will enter the password from the same client. If the password is entered from the other client, it will be controlled.
+Except for the last one, all other fields are extracted from the config.json file using configuration.    
+Except getters of private fields, We will explain others.    
+`setUserStatus`: This function updates the user status. (In fact, this function is a setter)    
+`decDownloadSize`: This function reduces the user's download size.    
+`isAbleToDownload`: This function returns true if the user has the right size to download the file, and returns false if there is no right size to download.
+### <a name="command-class"></a> Command class
+The functions related to project commands are explained in this section, how the commands are handled and get the answer, and then the answer for the data channel and the response and the log file are prepared and sent or received.    
+```cpp
+#ifndef COMMAND_H_
+#define COMMAND_H_  "COMMAND_H"
+
+#include "../library/User.h"
+#include "../library/Constant.h"
+
+#include <vector>
+#include <string>
+#include <iostream>
+#include <algorithm>
+
+class Command
+{
+public:
+    Command(std::vector<User*> users_, std::vector<std::string> files_, std::string addr_);
+    std::string loginUser(int socket);
+    std::string checkPass(int socket);
+    void getCurrentDirectory();
+    std::string makeNewDirectory();
+    std::string delDirectory();
+    void getFileList();
+    void changeDirectory(int isOrg);
+    void renameFile();
+    std::string downloadFile();
+    std::string uploadFile();
+    void help();
+    void quit();
+
+    void setWordOfCommand(std::vector<std::string> wordsOfCmd_);
+    void setDirectory(std::string newDir);
+    bool isLogin();
+    bool fileIsSecure(std::string fileName);
+    void setUserQuit();
+    void setInvalActivity(std::string activity);
+    std::string getDataChannel();
+    std::string getCmdChannel();
+
+private:
+    void resetChannels();
+
+    std::vector<std::string> wordsOfCmd;
+    std::vector<std::string> files;
+    std::string currentDirectory;
+    std::vector<User*> users;
+    std::string dataChannel;
+    std::string cmdChannel;
+    int onlineUser;
+};
+
+#endif
+```
+The `isLogin` function is used to determine whether the user is logged in or not.
+It can be identified using the `onlineUser` variable. In fact, this value contains the number of the user who is online, and if the user is not logged in, the value is negative one.    
+```cpp
+bool Command::isLogin()
+{
+    if(onlineUser == -1)
+    {
+        cmdChannel = NO_USER_FOR_CMD_A;
+        return false;
+    }
+    else
+        return true;
+}
+
+```
+`setWordOfCommand` function: to set the private wordsOfCmd value. It is a normal setter function and I will skip its code.    
+`setDirectory` function: to set the current directory of the program. is a normal setter function.    
+The `fileIsSecure` function checks whether the file is among the files that only the administrator should have access to, or whether others can also access it.    
+```cpp
+bool Command::fileIsSecure(string fileName)
+{
+    for(int i = 0 ; i < files.size() ; i++)
+    {
+        if(files[i] == fileName)
+            return true;
+    } 
+    return false;
+}
+```
+It works in such a way that it checks all the files and if one of the files has the same name as this file, it is declared as a security file, so it returns the correct value. But on the other hand, if this file name is not the same as any of the files, the false value will be returned.    
+`setUserQuit` function: In this function, the user's status is changed to not logged in and onlineUser (which indicates who is currently online and present in this client) is equal to -1.    
+```cpp
+void Command::setUserQuit()
+{
+    for(int i = 0 ; i < users.size() ; i++)
+        users[i]->setUserStatus(NOT_ENTERED);
+    onlineUser = -1;
+}
+```
+The `setInvalActivity` function is to find out if the input command or command is not according to the standard set (arguments and parameters) or if the command was not entered at all and the data was outlier, and prepare the corresponding output.
+```cpp
+void Command::setInvalActivity(string activity)
+{
+    resetChannels();
+    cmdChannel = activity;
+    dataChannel = EMPTY;
+}
+```
+The two channel getter functions that we used are for transferring appropriate outputs from the command to the client. The function `getDataChannel` is for the data channel and the next function `getCmdChannel` is for the response channel.
+The rest of the functions also perform operations related to input commands, which are explained in the following sections.
+The `resetChannels` function is to reset the channels in the command section of the string to the initial state, and then initialize the commands with their response and send them to the client.
+```cpp
+void Command::resetChannels()
+{
+    cmdChannel.clear();
+    dataChannel.clear();
+
+    cmdChannel = EMPTY;
+    dataChannel = EMPTY;
+}
+```
