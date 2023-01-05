@@ -1,0 +1,5 @@
+user Reyhane
+pass 123
+Upload c.txt
+Upload config.json
+Upload ./source/Config.cpp

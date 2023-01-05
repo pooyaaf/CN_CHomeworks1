@@ -28,3 +28,27 @@ Thu Jan  5 22:46:21 2023
 Reyhane: Has successfully downloaded file named config.json.
 Thu Jan  5 22:46:21 2023
 Reyhane: Has successfully downloaded file named ./source/Config.cpp.
+Thu Jan  5 23:02:06 2023
+Reyhane: Has successfully logged in.
+Thu Jan  5 23:02:06 2023
+Reyhane: Has successfully downloaded file named c.txt.
+Thu Jan  5 23:02:06 2023
+Reyhane: Has successfully downloaded file named config.json.
+Thu Jan  5 23:02:15 2023
+Reyhane: Has successfully downloaded file named ./source/Config.cpp.
+Thu Jan  5 23:03:09 2023
+Reyhane: Has entered username.
+Thu Jan  5 23:03:13 2023
+Reyhane: Has successfully logged in.
+Thu Jan  5 23:03:24 2023
+Reyhane: Has successfully uploaded file named c.txt.
+Thu Jan  5 23:03:39 2023
+Reyhane: Has successfully uploaded file named config.json.
+Thu Jan  5 23:04:03 2023
+Reyhane: Has successfully uploaded file named ./source/config.cpp.
+Thu Jan  5 23:04:41 2023
+Narges: Has entered username.
+Thu Jan  5 23:04:44 2023
+Narges: Has successfully logged in.
+Thu Jan  5 23:04:54 2023
+Narges: Permission denied on file named config.json.
