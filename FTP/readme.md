@@ -1,7 +1,6 @@
 # Socket Programming Mini Projects 
 Computer Networks - Fall 2022
-* Mohammad Pooya Afshari - 810198577
-* Mohammad Reza Sheshpari - 
+
 ## FTP
 Implemented FTP simple using cpp. with two ports for transferring data and commands between server & clients.
 ### Explain files
