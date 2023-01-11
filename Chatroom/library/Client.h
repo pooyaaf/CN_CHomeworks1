@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <pthread.h>
 #include <iostream>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,7 +15,7 @@
 #include <vector>
 
 
-#define CMD_SIGN "> "
+#define CMD_IN_SIGN ">> "
 
 const int CMD_MAX_LEN = 128; // Maximum command length.
 const int CMD_OUT_LEN = 8048; // Maximum command length received in telecommunications. 

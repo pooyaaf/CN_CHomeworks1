@@ -28,7 +28,7 @@ bool Client::initiate(int serverPort)
     while (true) 
     {
         // Receive command from command line.
-        cout << CMD_SIGN;
+        cout << CMD_IN_SIGN;
         memset(cmd, 0, MAX_COMMAND_LENGTH);
         cin.getline(cmd, CMD_MAX_LEN);
 
@@ -40,10 +40,13 @@ bool Client::initiate(int serverPort)
         recv(clientCmdFileDes, outputCmd, sizeof(outputCmd), 0);
         cout << CMD_OUTPUT_COUT << outputCmd << endl;
 
+        if (outputCmd == "Successful Quit.\n" )
+            break;
+        
         // Receive data output from server and show in command line.
-
     }
 
+    close(clientCmdFileDes);
     return true;
 }
 

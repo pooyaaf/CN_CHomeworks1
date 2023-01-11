@@ -15,34 +15,37 @@
 
 #define BACK_SLASH "/"
 #define DIR '/'
+#define TABER "  -"
 #define PREV_DIR '.'
 #define COLON ": "
 #define SPACE " "
 #define NEWL "\n"
 #define DELIMITER " "
 #define EMPTY ""
+#define CMD_OUT_SIGN "<< "
 
 #define PARA1 1
 #define PARA2 2
 
 #define INIT 0
 
-#define NAME_IDX 2
-#define ID_IDX 2
-#define MESSAGE_IDX 3
+#define NAME_IDX 1
+#define ID_IDX 1
+#define MESSAGE_IDX 2
 
-#define CONNECT_CMD_COUNT 3
-#define LIST_CMD_COUNT 2
-#define INFO_CMD_COUNT 3
-#define SEND_CMD_COUNT 4
-#define RECEIVE_CMD_COUNT 2
-#define QUIT_CMD_COUNT 0
+#define CONNECT_CMD_COUNT 2
+#define LIST_CMD_COUNT 1
+#define INFO_CMD_COUNT 2
+#define SEND_CMD_COUNT 3
+#define RECEIVE_CMD_COUNT 1
+#define QUIT_CMD_COUNT 1
 
 #define CONNECT_CMD "connect"
 #define LIST_CMD "list"
 #define INFO_CMD "info"
 #define SEND_CMD "send"
 #define RECEIVE_CMD "receive"
+#define EXIT_CMD "exit"
 
 #define CONNECT_CMD_A "CONNECTACK"
 #define LIST_CMD_A "LISTREPLAY"
@@ -53,10 +56,10 @@
 #define STATUS_FAILURE_CMD_A ": failure)"
 #define RECEIVE_CMD_A "RECEIVEREPLAY"
 
-#define USER_SUCCESSFUL_LOGOUT_A "Successful Quit."
-#define NO_USER_FOR_CMD_A "Need account for login."
-#define PARA_SYNTAX_ERROR_A "Syntax error in parameters or arguments."
-#define TOTAL_ERRORS_A "Error"
+#define USER_SUCCESSFUL_LOGOUT_A "Successful Quit.\n"
+#define NO_USER_FOR_CMD_A "Need account for login.\n"
+#define PARA_SYNTAX_ERROR_A "Syntax error in parameters or arguments.\n"
+#define TOTAL_ERRORS_A "Error, invalid Query.\n"
 
 enum CMDtype
 {
