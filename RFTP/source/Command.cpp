@@ -32,7 +32,6 @@ bool Command::isLogin()
         return true;
 }
 
-
 string Command::loginUser(int socket)
 {
     resetChannels();
