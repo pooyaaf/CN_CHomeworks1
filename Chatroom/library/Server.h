@@ -21,7 +21,7 @@
 #include "../library/Constant.h"
 
 
-typedef std::map<int, std::pair<int, int>> MP;
+typedef std::map<int, std::pair<std::pair<int, int>, int>> MP;
 
 class Server 
 {
@@ -50,6 +50,7 @@ private:
     MP allClientsFD; // first val is client ID and second val is client connected(if 1->connected, 0->not)
     std::string async="";
     int asycID = -1;
+    bool isExit = false;
 
     static Server* instance;
 };

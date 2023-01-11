@@ -23,6 +23,8 @@
 #define DELIMITER " "
 #define EMPTY ""
 #define CMD_OUT_SIGN "<< "
+#define CMD_IN_SIGN ">> "
+#define BACK_DEL '\b'
 
 #define PARA1 1
 #define PARA2 2

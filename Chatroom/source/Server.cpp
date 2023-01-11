@@ -126,7 +126,9 @@ string Server::sendOrder(int senderID, int receiverID, vector<string> mess)
     res += DELIMITER;
     res += to_string(lastMessageIndex++);
     res += NEWL;
-    string message = to_string(senderID) + PREV_DIR + clientsDB[senderID].first + COLON + message_ + NEWL;
+    string message = to_string(senderID) + PREV_DIR + clientsDB[senderID].first + COLON + message_;
+    async = CMD_OUT_SIGN + message;
+    message += NEWL;
     clientsDB[receiverID].second += message;
     int status = allClientsFD[receiverID].second;
     res += STATUS_CMD_A;
@@ -135,7 +137,6 @@ string Server::sendOrder(int senderID, int receiverID, vector<string> mess)
     res += NEWL;
 
     // async message
-    async = CMD_OUT_SIGN + message;
     if (status)
         asycID = receiverID;
     
@@ -237,6 +238,7 @@ void Server::distinguishCommand(int id, char* cmd)
             break;
         case QUIT:
             allClientsFD[id].second = 0;
+            isExit = true;
             commands[id] = USER_SUCCESSFUL_LOGOUT_A;
             break;
         case ARGPAR_ERR:
@@ -250,18 +252,19 @@ void Server::distinguishCommand(int id, char* cmd)
 
 bool Server::initiate()
 {
-    int serverFd, newSocket; 
+    int serverFd, serverAsyncFd, newSocket, newAsyncSocket; 
     char buffer[1024] = {0};
 
     
     fd_set master_set, working_set;
     
     serverFd = setupServer(SERVEER_PORT);
+    serverAsyncFd = setupServer(SERVEER_PORT+4);
 
-    if (serverFd < 0)
+    if (serverFd < 0 || serverAsyncFd < 0)
         return 0;
 
-    cerr << "server fd: " << serverFd << endl;
+    cerr << "server fd: " << serverFd << " server async fd: " << serverAsyncFd << endl;
 
     FD_ZERO(&master_set);
     FD_SET(serverFd, &master_set);
@@ -284,8 +287,9 @@ bool Server::initiate()
                 {  // new client
                     
                     newSocket = acceptClient(serverFd);
+                    newAsyncSocket = acceptClient(serverAsyncFd);
 
-                    allClientsFD[lastClientIndex] = make_pair(newSocket, NOT_CONNECTED);
+                    allClientsFD[lastClientIndex] = make_pair(make_pair(newSocket, newAsyncSocket), NOT_CONNECTED);
                     clientsDB.push_back(make_pair(EMPTY, EMPTY));
                     commands.push_back(EMPTY);
                     allClients[newSocket] = lastClientIndex++;
@@ -309,23 +313,24 @@ bool Server::initiate()
                         
                         cerr << "----------------------" << NEWL <<(commands[allClients[i]]) << "----------------------" << NEWL ;
                         //cmd
-                        if (isConnected)
-                            send(allClientsFD[allClients[i]].first, 
+                        if (isConnected || isExit)
+                            send(allClientsFD[allClients[i]].first.first, 
                                 (commands[allClients[i]].c_str()), 
                                 strlen(commands[allClients[i]].c_str()), 0);
                         
                         if (asycID>-1)
-                            send(allClientsFD[asycID].first, 
+                            send(allClientsFD[asycID].first.second, 
                                 (async.c_str()), 
                                 strlen(async.c_str()), 0);
                         asycID = -1;
+                        isExit = false;
                     }
                     if ((bytes_received == 0)||(isConnected == 0))
                     { // EOF
                         cerr << "Client closed with fd: " << i << ", isConnected: " << isConnected << endl;
                         allClientsFD[allClients[i]].second = 0;
                         string feedback = isConnected ? USER_SUCCESSFUL_LOGOUT_A : NO_USER_FOR_CMD_A;
-                        send(allClientsFD[allClients[i]].first, 
+                        send(allClientsFD[allClients[i]].first.first, 
                             (feedback.c_str()), 
                             strlen(feedback.c_str()), 0);
                         close(i);
