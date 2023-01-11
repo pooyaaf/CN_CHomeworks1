@@ -90,27 +90,6 @@ bool Client::initiate(int serverPort)
     pthread_join(recieverTH, NULL);
     pthread_join(recieveATH, NULL);
 
-    // while (true) 
-    // {
-    //     // Receive command from command line.
-    //     cout << CMD_IN_SIGN;
-    //     memset(cmd, 0, MAX_COMMAND_LENGTH);
-    //     cin.getline(cmd, CMD_MAX_LEN);
-
-    //     // Send command to server.
-    //     send(clientCmdFileDes, cmd, CMD_MAX_LEN, 0);
-
-    //     // Receive command output from server and show in command line.
-    //     memset(outputCmd, 0, sizeof outputCmd);
-    //     recv(clientCmdFileDes, outputCmd, sizeof(outputCmd), 0);
-    //     cout << CMD_OUTPUT_COUT << outputCmd << endl;
-
-    //     if (outputCmd == "Successful Quit.\n" )
-    //         break;
-        
-    //     // Receive data output from server and show in command line.
-    // }
-
     close(clientCmdFileDes);
     return true;
 }

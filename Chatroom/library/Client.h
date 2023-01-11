@@ -44,15 +44,6 @@ public:
 
 private:
     bool invalidInitiating(int serverPort);
-    // void* recieveTH(void* input);
-    // void* recieveAsyncTH(void* input);
-
-    // char cmd[CMD_MAX_LEN];
-    // char outputCmd[DATA_OUT_LEN] = {0};
-
-    // int clientCmdFileDes; // Client command file descriptor.
-
-    // static constexpr int MAX_COMMAND_LENGTH = 128;
 
 };
 
